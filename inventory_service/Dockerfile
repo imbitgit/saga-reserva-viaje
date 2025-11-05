@@ -4,11 +4,10 @@ WORKDIR /app
 
 COPY app.py .
 
-RUN pip install flask requests
+RUN pip install flask
 
-EXPOSE 5100
+EXPOSE 5103
 
 CMD ["python", "app.py"]
-
 
 

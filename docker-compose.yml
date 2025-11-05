@@ -1,28 +1,56 @@
 services:
-  flight_service:
-    build: ./flight_service
-    container_name: flight_service
-    ports:
-      - "5001:5001"
+  user_service_james:
+    build: ./user_service_james
+    ports: ["5101:5101"]
 
-  hotel_service:
-    build: ./hotel_service
-    container_name: hotel_service
-    ports:
-      - "5002:5002"
+  cart_service:
+    build: ./cart_service
+    ports: ["5102:5102"]
 
-  car_service:
-    build: ./car_service
-    container_name: car_service
-    ports:
-      - "5003:5003"
+  inventory_service:
+    build: ./inventory_service
+    ports: ["5103:5103"]
+
+  payment_service:
+    build: ./payment_service
+    ports: ["5104:5104"]
+
+  invoice_service:
+    build: ./invoice_service
+    ports: ["5105:5105"]
+
+  shipping_service:
+    build: ./shipping_service
+    ports: ["5106:5106"]
+
+  notification_service:
+    build: ./notification_service
+    ports: ["5107:5107"]
+
+  analytics_service:
+    build: ./analytics_service
+    ports: ["5108:5108"]
+
+  loyalty_service:
+    build: ./loyalty_service
+    ports: ["5109:5109"]
+
+  review_service:
+    build: ./review_service
+    ports: ["5110:5110"]
 
   orchestrator:
     build: ./orchestrator
-    container_name: orchestrator
-    ports:
-      - "5000:5000"
+    ports: ["5100:5100"]
     depends_on:
-      - flight_service
-      - hotel_service
-      - car_service
+      - user_service_james
+      - cart_service
+      - inventory_service
+      - payment_service
+      - invoice_service
+      - shipping_service
+      - notification_service
+      - analytics_service
+      - loyalty_service
+      - review_service
+
