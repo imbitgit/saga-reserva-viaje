@@ -1,177 +1,111 @@
-# 🧳 Travel Booking Saga Pattern - Microservices Simulation
+# 🧙 Wizard School Enrollment - Saga Pattern Simulation
 
-This project simulates the **Saga Pattern** using four simple microservices communicating over HTTP via REST. The architecture follows a centralized orchestrator model to coordinate the distributed transactions.
+This project simulates the **Saga Pattern** for a wizard school enrollment process using four microservices. The architecture follows a centralized **orchestrator** model to coordinate the distributed transaction.
 
-Each service uses in-memory storage (Python lists or Node.js arrays), making it ideal for quick testing and learning environments.
+When a student enrolls, the orchestrator coordinates three steps:
+1.  **Validate Wand**: Confirms the student has a valid wand.
+2.  **Assign House**: Assigns the student to a school house (this step can fail randomly).
+3.  **Deliver Owl**: Sends a welcome owl with the admission letter.
+
+If any step fails, the orchestrator triggers compensating transactions to undo the previous steps.
 
 ---
 
 ## 🚀 Microservices Overview
 
-| Service         | Port  | Description                               |
-|-----------------|-------|-------------------------------------------|
-| flight_service  | 5001  | Simulates flight booking and cancellation |
-| hotel_service   | 5002  | Simulates hotel booking (with random failure) |
-| car_service     | 5003  | Simulates car rental booking              |
-| orchestrator    | 5000  | Coordinates the booking flow (Saga logic) |
+| Service         | Language | Port | Description                                      |
+|-----------------|----------|------|--------------------------------------------------|
+| `orchestrator`  | Python   | 5000 | Coordinates the enrollment flow (Saga logic).    |
+| `wand-service`  | Python   | 5001 | Validates and revokes a student's wand.          |
+| `house-service` | Node.js  | 5002 | Assigns a house (with random failure simulation).|
+| `owl-service`   | Python   | 5003 | Delivers and revokes the welcome owl.            |
 
 ---
 
 ## 🧱 Technologies Used
 
-- Python + Flask (`flight_service`, `car_service`, `orchestrator`)
-- Node.js + Express (`hotel_service`)
-- Docker + Docker Compose
+- Python + Flask
+- Node.js + Express
+- Docker
+- **Kubernetes**
 
 ---
 
-## 📦 How to Run It
+## ⚙️ Running with Kubernetes (Minikube)
+
+These instructions assume you have `docker` and `minikube` installed.
+
+### 1. Start Minikube
 
 ```bash
-git clone https://github.com/fredyunivalle/saga-reserva-viaje.git
-cd saga-reserva-viaje
-docker-compose up --build
+minikube start
 ```
 
----
+### 2. Build Docker Images
 
-## 🧪 Testing Each Microservice
-
-Use the following `curl` commands to test each service independently:
-
-### ✈️ Flight Service (http://localhost:5001)
+In the project's root directory, build the image for each service:
 
 ```bash
-# Reserve a flight
-curl -X POST http://localhost:5001/reserve -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# Cancel flight
-curl -X POST http://localhost:5001/cancel -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# View all reservations
-curl http://localhost:5001/reservas
+docker build -t wand-service:latest ./wand-service
+docker build -t house-service:latest ./house-service
+docker build -t owl-service:latest ./owl-service
+docker build -t orchestrator:latest ./orchestrator
 ```
 
-### 🏨 Hotel Service (http://localhost:5002)
+### 3. Load Images into Minikube
+
+Make the local images available to the Minikube cluster:
 
 ```bash
-# Reserve a hotel (may fail randomly)
-curl -X POST http://localhost:5002/reserve -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# Cancel hotel
-curl -X POST http://localhost:5002/cancel -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# View all reservations
-curl http://localhost:5002/reservas
+minikube image load wand-service:latest
+minikube image load house-service:latest
+minikube image load owl-service:latest
+minikube image load orchestrator:latest
 ```
 
-### 🚗 Car Service (http://localhost:5003)
+### 4. Deploy to Kubernetes
+
+Apply all the Kubernetes manifests from the `k8s` directory:
 
 ```bash
-# Reserve a car
-curl -X POST http://localhost:5003/reserve -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# Cancel car
-curl -X POST http://localhost:5003/cancel -H "Content-Type: application/json" -d '{"user": "john_doe"}'
-
-# View all reservations
-curl http://localhost:5003/reservas
+kubectl apply -f k8s/
 ```
 
-### 🤖 Orchestrator (http://localhost:5000)
+Check that all pods are running:
 
 ```bash
-# Book a complete trip
-curl -X POST http://localhost:5000/book-trip -H "Content-Type: application/json" -d '{"user": "john_doe"}'
+kubectl get pods
+# NAME                                       READY   STATUS    RESTARTS   AGE
+# house-deployment-xxxxxxxxxx-xxxxx        1/1     Running   0          15s
+# orchestrator-deployment-xxxxxxxxxx-xxxxx   1/1     Running   0          15s
+# owl-deployment-xxxxxxxxxx-xxxxx          1/1     Running   0          15s
+# wand-deployment-xxxxxxxxxx-xxxxx         1/1     Running   0          15s
 ```
 
----
+### 5. Test the Enrollment Saga
 
-## 🔄 Saga Flow Diagram (Orchestration)
+First, get the URL for the orchestrator service:
 
-```
-User
-  |
-  v
-Orchestrator --> Flight Service (/reserve)
-      |
-      v
-      --> Hotel Service (/reserve)   <-- may fail randomly
-      |
-      v
-      --> Car Service (/reserve)
-      |
-      v
-      On Error: Compensation (/cancel)
+```bash
+minikube service orchestrator-service
 ```
 
----
+This command will print the URL (e.g., `http://127.0.0.1:54321`) and may open it in your browser. Use this URL to send a `POST` request.
 
-## 🧠 More Saga Use Case Ideas (Beyond Travel)
+**Example with `curl`:**
 
-Don't limit yourself to travel-themed systems — microservices and the Saga pattern apply to many domains. Below are some real-world and imaginative scenarios to inspire your team:
+```bash
+# Replace <URL> with the one from the previous command
+curl -X POST <URL>/enroll -H "Content-Type: application/json" -d '{"student": "harry_potter"}'
+```
 
-### 💳 Fintech / Digital Banking
-- **Use Case:** Opening a new bank account
-- **Services:** Identity verification, credit check, account creation, card issuance
-- **Compensation:** Revoke application, delete user data
+- **On success**, you'll get a `200 OK` with `{"status":"success", ...}`.
+- **On failure** (the house assignment fails randomly), you'll get a `500 Internal Server Error` with `{"status":"failed", ...}`. Check the orchestrator's logs (`kubectl logs deploy/orchestrator-deployment`) to see the compensation logic in action.
 
-### 🛍️ E-Commerce Checkout
-- **Use Case:** Purchasing a product
-- **Services:** Cart validation, payment processing, inventory update, order confirmation
-- **Compensation:** Cancel payment, restock items, invalidate order
+### 6. Cleanup
 
-### 🏥 Hospital Management
-- **Use Case:** Scheduling surgery
-- **Services:** Book surgeon, reserve operating room, assign anesthesia team
-- **Compensation:** Free up resources, notify cancellation
+To delete all the created resources:
 
-### 🎮 Online Gaming Matchmaking
-- **Use Case:** Creating a multiplayer match
-- **Services:** Lobby creation, player matching, server allocation
-- **Compensation:** Close lobby, release server slots
-
-### 🍕 Food Delivery
-- **Use Case:** Ordering a meal
-- **Services:** Create order, assign restaurant, dispatch rider, process payment
-- **Compensation:** Cancel order, refund payment, notify customer
-
-### 🎓 University Enrollment
-- **Use Case:** Semester registration
-- **Services:** Course eligibility check, enroll subjects, generate bill
-- **Compensation:** Cancel enrollment, release class seats
-
-### 📦 Logistics & Shipping
-- **Use Case:** Fulfill a shipping order
-- **Services:** Assign warehouse, prepare package, schedule pickup
-- **Compensation:** Cancel shipment, restock inventory
-
----
-
-### 🧙‍♀️ Magical or Cutesy (Imaginative) Scenarios
-
-#### 🧙 Wizard School Enrollment
-- **Services:** Wand validation, house assignment, owl delivery  
-- **Compensation:** Revoke owl, undo house sorting
-
-#### 🐉 Dragon Rider Training
-- **Services:** Dragon match, training session, gear assignment  
-- **Compensation:** Cancel training, return dragon
-
-#### 💕 LoveSong Records
-- **Services:** Write lyrics, compose music, record vocals, deliver digital file  
-- **Compensation:** Emotional refund 💔, delete song
-
----
-
-## 🧪 Lab Instructions (Team Project)
-
-This is a **team lab**. You must collaborate to implement a full Saga-based microservices project.
-
-- Each team member should build one microservice (e.g., flight, hotel, payment, etc.).
-- Together, you will design and develop the **central orchestrator**.
-  - Optionally, nominate a **tech lead** to coordinate the orchestrator logic.
-- You can implement services in different languages (e.g., Python, Node.js, Java).
-- Use Docker Compose for local testing, and Kubernetes for deployment in the final version.
-
-> 💡 Be creative. Think like real engineers. Surprise your instructor with something useful, fun, or just totally unexpected!
+```bash
+kubectl delete -f k8s/
+```

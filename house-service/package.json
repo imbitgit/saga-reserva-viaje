@@ -1,14 +1,13 @@
 {
-    "name": "hotel_service",
+    "name": "house-service",
     "version": "1.0.0",
-    "description": "Microservicio de hotel para Saga",
+    "description": "Microservicio de asignación de casa para Saga",
     "main": "app.js",
     "scripts": {
       "start": "node app.js"
     },
-    "dependencies": {
+    "dependencies": { 
       "body-parser": "^1.20.2",
       "express": "^4.18.2"
     }
   }
-  
